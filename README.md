@@ -13,7 +13,7 @@ Este repositorio contiene el backend construido con [NestJS](https://nestjs.com/
 
 ## 📚 Propósito del proyecto
 
-Este código forma parte de un conjunto de artículos técnicos publicados en el blog [**Desde la Capa de Dominio**](https://desdelacapadedominio.com).  
+Este código forma parte de un conjunto de artículos técnicos publicados en el blog [**Desde la Capa de Dominio**](https://www.dddominio.com/blog).  
 Está pensado para servir como **referencia educativa y de divulgación técnica**.
 
 No es un producto final ni una solución lista para producción. Su objetivo es mostrar, paso a paso, cómo diseñar y construir un sistema backend con intención arquitectónica.
@@ -47,5 +47,5 @@ Si tienes preguntas o deseas solicitar permiso para un uso específico, puedes e
 ## ✉️ Autor
 
 Desarrollado por [**Abraham Vilches de la Cruz**](https://www.linkedin.com/in/abraham-vilches-de-la-cruz-295538175/)  
-Twitter/X: [@avdelacruz](https://twitter.com/avdelacruz)  
-Blog: [desdelacapadedominio.com](https://desdelacapadedominio.com)
+Portfolio: [🙋🏼‍♂️](https://abrahamvilches.com/)  
+Blog: [desdelacapadedominio.com](https://www.dddominio.com/blog)
