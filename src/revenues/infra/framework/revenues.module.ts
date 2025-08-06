@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { RevenueCreator } from '../../app/revenue-creator';
+import { RevenueCreator } from '@revenues/app/create/revenue-creator';
 
 @Module({
   imports: [],

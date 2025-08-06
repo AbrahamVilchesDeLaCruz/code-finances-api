@@ -1,11 +1,11 @@
-import { Test } from '@nestjs/testing';
-import { RevenueCreator } from '../../../src/revenues/app/revenue-creator';
+import { Test, TestingModule } from '@nestjs/testing';
+import { RevenueCreator } from '@revenues/app/create/revenue-creator';
 
 describe('RevenueCreator', () => {
   let revenueCreator: RevenueCreator;
 
   beforeEach(async () => {
-    const moduleRef = await Test.createTestingModule({
+    const moduleRef: TestingModule = await Test.createTestingModule({
       providers: [RevenueCreator],
     }).compile();
 

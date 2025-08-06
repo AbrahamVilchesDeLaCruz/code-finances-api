@@ -1,6 +1,6 @@
 import { Global, Module } from '@nestjs/common';
-import { HealthCheckGetController } from '../controllers/health-check-get.controller';
 import { ConfigModule } from '@nestjs/config';
+import { HealthCheckGetController } from '@shared/infra/controllers/health-check-get.controller';
 
 @Global()
 @Module({

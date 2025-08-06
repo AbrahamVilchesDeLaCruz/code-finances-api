@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "docker:local": "ENV=local BUILD_TARGET=local START_COMMAND=start:dev docker-compose --env-file .env.local up --build",
+    "docker:dev": "ENV=local BUILD_TARGET=local START_COMMAND=start:dev docker-compose --env-file .env.local up --build",
     "docker:test": "ENV=test BUILD_TARGET=test START_COMMAND=test docker-compose --env-file .env.test up --build",
     "docker:prod": "ENV=prod BUILD_TARGET=prod START_COMMAND=start:prod docker-compose up --build"
   },
@@ -80,6 +80,10 @@
     "roots": [
       "<rootDir>/src",
       "<rootDir>/test"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+      "^@revenues/(.*)$": "<rootDir>/src/revenues/$1"
+    }
   }
 }

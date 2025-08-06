@@ -1,4 +1,4 @@
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { HttpStatus, INestApplication } from '@nestjs/common';
 import { AppModule } from '../../../../src/app.module';
 import request from 'supertest';
@@ -7,7 +7,7 @@ describe('HealthCheckerGetController E2E Tests', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
+    const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
