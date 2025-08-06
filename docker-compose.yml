@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+      target: ${BUILD_TARGET:-local}
+    container_name: code-finances-api
+    ports:
+      - '${PORT}:${PORT}'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    env_file:
+      - .env.${ENV:-local}
+    command: npm run ${START_COMMAND:-start:dev}
