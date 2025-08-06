@@ -9,7 +9,6 @@ COPY . .
 
 # Etapa de desarrollo
 FROM base AS local
-RUN npm install -g @nestjs/cli
 ENV NODE_ENV=local
 CMD ["npm", "run", "start:dev"]
 
