@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RevenueCreator } from '@revenues/app/create/revenue-creator';
+import { RevenueCreatorMother } from './revenue-creator-mother';
 
 describe('RevenueCreator', () => {
   let revenueCreator: RevenueCreator;
@@ -12,7 +13,11 @@ describe('RevenueCreator', () => {
     revenueCreator = moduleRef.get<RevenueCreator>(RevenueCreator);
   });
 
-  it('should be defined', () => {
-    expect(revenueCreator).toBeDefined();
+  it('Create a new revenue', async () => {
+    const request = RevenueCreatorMother.request();
+
+    const result = await revenueCreator.execute(request);
+
+    expect(result).toBeUndefined();
   });
 });
