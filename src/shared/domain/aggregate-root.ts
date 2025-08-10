@@ -1,6 +1,6 @@
 /* import { DomainEvent } from '@shared/domain/events/domain-event'; */
 
-export abstract class Aggregate {
+export abstract class AggregateRoot<TPrimitives> {
   //public readonly domainEvents: DomainEvent[] = [];
 
   /*  public record(event: DomainEvent): void {
@@ -11,7 +11,5 @@ export abstract class Aggregate {
     return this.domainEvents.splice(0, this.domainEvents.length);
   } */
 
-  public abstract toPrimitives(): object;
-
-  public abstract fromPrimitives(data: object): void;
+  public abstract toPrimitives(): TPrimitives;
 }

@@ -14,9 +14,16 @@ export class RevenueCreator implements UseCase {
   ) {}
 
   async execute(request: RequestRevenueCreator): Promise<void> {
-    const { id, amount } = request;
+    const { id, amount, date, equityId, accountId, description } = request;
 
-    const revenue = Revenue.create(id, amount);
+    const revenue = Revenue.create(
+      id,
+      amount,
+      date,
+      equityId,
+      accountId,
+      description,
+    );
 
     await this.repository.save(revenue);
   }
