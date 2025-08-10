@@ -19,7 +19,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "docker:dev": "ENV=local BUILD_TARGET=local START_COMMAND=start:dev docker-compose --env-file .env.local up --build",
-    "docker:test": "ENV=test BUILD_TARGET=test START_COMMAND=test docker-compose --env-file .env.test up --build",
+    "docker:test": "ENV=test BUILD_TARGET=test START_COMMAND=test docker-compose --env-file .env.test up --build --abort-on-container-exit --exit-code-from app",
+    "docker:tests": "docker build --target test -t tests . && docker run --rm tests",
     "docker:prod": "ENV=prod BUILD_TARGET=prod START_COMMAND=start:prod docker-compose up --build"
   },
   "dependencies": {

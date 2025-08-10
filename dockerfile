@@ -1,21 +1,24 @@
 FROM node:20-slim AS base
-
-WORKDIR /app
-
+WORKDIR /var/www/
 COPY package*.json ./
-RUN npm install
-
-COPY . .
+COPY tsconfig.json .
+COPY tsconfig.build.json .
+COPY src ./src
 
 # Etapa de desarrollo
 FROM base AS local
 ENV NODE_ENV=local
+COPY . .
+RUN rm -rf node_modules
+RUN npm install
 CMD ["npm", "run", "start:dev"]
 
 # Etapa de test
 FROM base AS test
 ENV NODE_ENV=test
-RUN npm run build
+COPY .env.test .env.test
+COPY test ./test
+RUN npm install
 CMD ["npm", "run", "test"]
 
 # Etapa de producción

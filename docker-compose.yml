@@ -11,4 +11,50 @@ services:
       - /app/node_modules
     env_file:
       - .env.${ENV:-local}
-    command: npm run ${START_COMMAND:-start:dev}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    networks:
+      - code-finances-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4096m
+  db:
+    container_name: code-finances-db
+    image: postgres:14.3
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - code-finances-net
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'pg_isready',
+          '-U',
+          '${DB_USER}',
+          '-d',
+          '${DB_NAME}',
+          '-h',
+          'localhost',
+          '-p',
+          '5432',
+        ]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+      start_period: 10s
+
+networks:
+  code-finances-net:
+    driver: bridge
