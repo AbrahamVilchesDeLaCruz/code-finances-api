@@ -11,10 +11,15 @@ import { InvalidRevenueDescription } from '@revenues/domain/invalid-revenue-desc
 import { InvalidPositive } from '@shared/domain/value-objects/invalid-positive-number.exception';
 import { MotherCreator } from '../../../shared/domain/mother-creator';
 import { InvalidRevenueAmount } from '@revenues/domain/invalid-revenue-amount.exception';
+import {
+  DOMAIN_EVENT_PUBLISHER,
+  DomainEventPublisher,
+} from '@shared/domain/event/domain-event-publisher';
 
 describe('RevenueCreator Unit', () => {
   let revenueCreator: RevenueCreator;
   const revenueRepositoryMock = mock<RevenueRepository>();
+  const domainEventPublisherMock = mock<DomainEventPublisher>();
 
   beforeEach(async () => {
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -23,6 +28,10 @@ describe('RevenueCreator Unit', () => {
         {
           provide: REVENUE_REPOSITORY,
           useValue: revenueRepositoryMock,
+        },
+        {
+          provide: DOMAIN_EVENT_PUBLISHER,
+          useValue: domainEventPublisherMock,
         },
       ],
     }).compile();
@@ -38,6 +47,7 @@ describe('RevenueCreator Unit', () => {
     await revenueCreator.execute(request);
 
     expect(revenueRepositoryMock.save).toHaveBeenCalledWith(revenue);
+    expect(domainEventPublisherMock.publish).toHaveBeenCalled();
   });
 
   it('Shoudl throw an error when description is empty', async () => {

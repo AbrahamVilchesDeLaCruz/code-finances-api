@@ -1,15 +1,15 @@
-/* import { DomainEvent } from '@shared/domain/events/domain-event'; */
+import { DomainEvent } from '@shared/domain/event/domain-event';
 
 export abstract class AggregateRoot<TPrimitives> {
-  //public readonly domainEvents: DomainEvent[] = [];
+  public readonly domainEvents: DomainEvent[] = [];
 
-  /*  public record(event: DomainEvent): void {
+  public record(event: DomainEvent): void {
     this.domainEvents.push(event);
-  } */
+  }
 
-  /* public pullDomainEvents(): DomainEvent[] {
+  public pullDomainEvents(): DomainEvent[] {
     return this.domainEvents.splice(0, this.domainEvents.length);
-  } */
+  }
 
   public abstract toPrimitives(): TPrimitives;
 }

@@ -5,6 +5,7 @@ import { RevenueDescription } from './revenue-description';
 import { RevenueDate } from './revenue-date';
 import { EquityId } from './equity-id';
 import { AccountId } from './account-id';
+import { RevenueCreatedEvent } from './revenue-created.event';
 
 export type RevenueReadModel = {
   id: string;
@@ -35,7 +36,7 @@ export class Revenue extends AggregateRoot<RevenueReadModel> {
     accountId: string,
     description: string,
   ): Revenue {
-    return this.fromPrimitives({
+    const revenue = this.fromPrimitives({
       id,
       amount,
       date,
@@ -44,7 +45,9 @@ export class Revenue extends AggregateRoot<RevenueReadModel> {
       description,
     });
 
-    //Evento de dominio
+    revenue.record(new RevenueCreatedEvent(revenue.id, revenue.toPrimitives()));
+
+    return revenue;
   }
 
   public toPrimitives(): RevenueReadModel {
