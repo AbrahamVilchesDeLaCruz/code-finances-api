@@ -55,6 +55,23 @@ services:
       timeout: 5s
       start_period: 10s
 
+  rabbitmq:
+    container_name: 'rabbitmq_code_finances'
+    image: rabbitmq:3-management
+    ports:
+      - '5001:5672'
+      - '15001:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ['CMD', 'rabbitmqctl', 'status']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - code-finances-net
+
 networks:
   code-finances-net:
     driver: bridge
