@@ -1,86 +1,78 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { DomainEvent } from '@shared/domain/event/domain-event';
 import { EventBus } from '@shared/domain/event/event-bus';
-import {
+import amqp, {
+  type Connection,
   Channel,
-  type ChannelModel,
-  connect,
-  Connection,
   ConsumeMessage,
-  MessagePropertyHeaders,
   Options,
+  type ChannelModel,
 } from 'amqplib';
 import { CouldNotConnectToBus } from './could-not-connect-to-bus.exception';
-import { InvalidDomainEvent } from '@shared/domain/event/invalid-domain-event.exception';
+import { DomainEvent } from '@shared/domain/event/domain-event';
 
 @Injectable()
 export class AmqpEventBus implements EventBus {
+  private readonly logger = new Logger(AmqpEventBus.name);
+
+  private connection!: Connection;
+  private channel!: Channel;
+
   private readonly url: string;
   private readonly exchangeType: string;
   private readonly maxRetries: number;
   private readonly retryDelay: number;
-  private connection: Connection | null;
-  private channel: Channel | null;
 
   constructor(private readonly configService: ConfigService) {
-    this.url = configService.get<string>('amqp.uri')!;
-    this.exchangeType = configService.get<string>('amqp.exchange_type')!;
-    this.maxRetries = configService.get<number>('amqp.max_retries')!;
-    this.retryDelay = configService.get<number>('amqp.retry_delay')!;
+    this.url = this.configService.get<string>('amqp.uri')!;
+    this.exchangeType = this.configService.get<string>('amqp.exchange_type')!;
+    this.maxRetries = this.configService.get<number>('amqp.max_retries')!;
+    this.retryDelay = this.configService.get<number>('amqp.retry_delay')!;
   }
 
-  private async getConnection(): Promise<ChannelModel> {
-    if (!this.connection) {
+  // -------------------------------
+  // Connection handling
+  // -------------------------------
+  private async connect(): Promise<void> {
+    let attempt = 0;
+    while (attempt < this.maxRetries) {
       try {
-        this.connection = await connect(this.url);
-
-        this.connection.on('close', () => {
-          console.warn('AMQP connection closed');
-          this.connection = null;
-          this.channel = null;
-        });
-
-        this.connection.on('error', (err: unknown) => {
-          if (err instanceof Error) {
-            console.error(`AMQP connection error: ${err.message}`);
-          } else {
-            console.error(`AMQP connection error: ${String(err)}`);
-          }
-        });
-
-        console.info('AMQP connection established');
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          console.error(`Failed to establish AMQP connection: ${err.message}`);
-        } else {
-          console.error(`Failed to establish AMQP connection: ${String(err)}`);
-        }
-        throw new CouldNotConnectToBus();
+        this.logger.log(`Connecting to RabbitMQ (attempt ${attempt + 1})...`);
+        const channelModel = (await amqp.connect(this.url)) as ChannelModel;
+        this.connection = channelModel.connection as Connection;
+        this.channel = await channelModel.createChannel();
+        this.logger.log('Connected to RabbitMQ');
+        return;
+      } catch (err: any) {
+        this.logger.error(`Connection failed: ${err}`);
+        attempt++;
+        await this.delay(this.retryDelay);
       }
     }
-    return this.connection!;
+    throw new CouldNotConnectToBus();
   }
 
   private async getChannel(): Promise<Channel> {
-    if (!this.channel) {
-      const connection = await this.getConnection();
-
-      this.channel = await connection.createChannel();
-
-      this.channel.on('error', (error) => {
-        console.error(`AMQP channel error: ${error.message}`);
-        this.channel = null;
-      });
-
-      console.info('AMQP channel created');
+    if (!this.connection) {
+      await this.connect();
     }
+    return this.channel;
+  }
 
-    return this.channel!;
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  // -------------------------------
+  // Exchange and queue setup
+  // -------------------------------
+  private async ensureExchange(exchangeName: string): Promise<void> {
+    await this.channel.assertExchange(exchangeName, this.exchangeType, {
+      durable: true,
+    });
   }
 
   private async setupQueues(
@@ -88,177 +80,129 @@ export class AmqpEventBus implements EventBus {
     exchangeName: string,
     bindingKey: string,
   ): Promise<void> {
-    const channel = await this.getChannel();
+    await this.ensureExchange(exchangeName);
 
-    await channel.assertExchange(exchangeName, this.exchangeType);
+    // Principal - sin DLX, manejamos reintentos manualmente
+    await this.channel.assertQueue(queueName, { durable: true });
 
-    await channel.assertQueue(queueName, { durable: true });
-
-    await channel.assertQueue(`${queueName}.retry`, {
+    // Retry - TTL y luego vuelve a principal
+    await this.channel.assertQueue(`${queueName}.retry`, {
       durable: true,
       messageTtl: this.retryDelay,
       deadLetterExchange: exchangeName,
       deadLetterRoutingKey: queueName,
     });
 
-    await channel.assertQueue(`${queueName}.dead_letter`, {
+    // Dead-letter - mensajes no procesados
+    await this.channel.assertQueue(`${queueName}.dead_letter`, {
       durable: true,
     });
 
-    await channel.bindQueue(queueName, exchangeName, bindingKey);
-    await channel.bindQueue(queueName, exchangeName, queueName);
+    // Bind principal
+    await this.channel.bindQueue(queueName, exchangeName, bindingKey);
+    await this.channel.bindQueue(queueName, exchangeName, queueName);
   }
 
-  async consume(
-    queueName: string,
-    bindingKey: string,
-    exchangeName: string,
-    DomainEventInstance: new (...args: any[]) => DomainEvent,
-    handler: (event: DomainEvent) => Promise<void>,
-  ): Promise<void> {
-    await this.setupQueues(queueName, exchangeName, bindingKey);
+  // -------------------------------
+  // Publishing
+  // -------------------------------
+  public async publish(events: DomainEvent[]): Promise<void> {
+    if (!events.length) return;
 
     const channel = await this.getChannel();
-    await channel.prefetch(1);
+    const exchangeName = this.configService.get<string>('amqp.exchange_name')!;
+    await this.ensureExchange(exchangeName);
 
-    await channel.consume(queueName, async (msg: ConsumeMessage) => {
-      if (msg) {
-        try {
-          await this.handle(msg, DomainEventInstance, handler);
-          channel.ack(msg);
-        } catch (error) {
-          console.error(`[HandlerError] ${error.message}`);
-          channel.nack(msg, false, false);
-        }
-      }
-    });
+    for (const event of events) {
+      const routingKey = event.eventName();
+      const message = Buffer.from(event.decode());
 
-    console.info(`[Consume] Set up → ${queueName}`);
-  }
+      this.logger.log(
+        `Publishing event "${routingKey}" to exchange "${exchangeName}"`,
+      );
 
-  private async retry(
-    message: any,
-    headers: MessagePropertyHeaders,
-    msg: ConsumeMessage,
-  ): Promise<void> {
-    const retryCount = (headers.retries || 0) + 1;
-    const retryQueue = `${msg.fields.routingKey}.retry`;
-    const channel = await this.getChannel();
-
-    console.warn(`[Retry #${retryCount}] → ${retryQueue}`);
-
-    channel.sendToQueue(retryQueue, Buffer.from(JSON.stringify(message)), {
-      headers: {
-        ...headers,
-        retries: retryCount,
-      },
-    });
-  }
-
-  private async sendToDlx(
-    message: any,
-    error: string,
-    queueName: string,
-  ): Promise<void> {
-    const dlq = `${queueName}.dead_letter`;
-    const channel = await this.getChannel();
-
-    console.warn(`[DLX] → ${dlq} | Reason: ${error}`);
-
-    channel.sendToQueue(dlq, Buffer.from(JSON.stringify(message)), {
-      headers: {
-        error,
-        retries: message.retries,
-      },
-    });
-  }
-
-  async publish(domainEvents: DomainEvent[]): Promise<void> {
-    const channel = await this.getChannel();
-    const exchange = this.configService.get<string>('amqp.exchange_name');
-
-    for (const event of domainEvents) {
       channel.publish(
-        exchange,
-        event.eventName(),
-        Buffer.from(event.decode()),
-        this.opts(event),
+        exchangeName,
+        routingKey,
+        message,
+        this.getMessageOptions(),
       );
     }
   }
 
-  private opts(
-    event: DomainEvent,
-    retries?: number,
-    error?: string,
-  ): Options.Publish {
+  private getMessageOptions(): Options.Publish {
     return {
+      persistent: true,
       contentType: 'application/json',
-      contentEncoding: 'utf-8',
-      priority: 0,
-      messageId: event.eventId.value,
-      timestamp: event.occurredOn.value.getTime(),
-      type: event.eventName(),
-      deliveryMode: 2,
-      headers: {
-        error,
-        retries: retries ? retries + 1 : 0,
-        type: event.eventName(),
-      },
     };
   }
 
-  private instanceDomainEvent(
-    DomainEventInstance: new (...args: any[]) => DomainEvent,
-    message: any,
-  ): DomainEvent {
-    if (message.data) {
-      return new DomainEventInstance(
-        message.aggregateId,
-        message.data,
-        message.eventId,
-        new Date(message.occurredOn as string),
-      );
-    }
+  // -------------------------------
+  // Consuming
+  // -------------------------------
+  public async consume<T extends DomainEvent>(
+    queueName: string,
+    bindingKey: string,
+    exchangeName: string,
+    domainEvent: new (...args: any[]) => T,
+    handler: (event: T) => Promise<void>,
+  ): Promise<void> {
+    const channel = await this.getChannel();
+    await this.setupQueues(queueName, exchangeName, bindingKey);
 
-    throw new InvalidDomainEvent(JSON.stringify(message));
+    this.logger.log(
+      `Consuming from "${queueName}" (binding "${bindingKey}") on exchange "${exchangeName}"`,
+    );
+
+    await channel.consume(queueName, async (msg) => {
+      if (!msg) return;
+      await this.handleMessage(msg, queueName, domainEvent, handler);
+    });
   }
 
-  private async handle(
+  private async handleMessage<T extends DomainEvent>(
     msg: ConsumeMessage,
-    DomainEventInstance: new (...args: any[]) => DomainEvent,
-    handler: (event: DomainEvent) => Promise<void>,
+    queueName: string,
+    domainEvent: new (...args: any[]) => T,
+    handler: (event: T) => Promise<void>,
   ): Promise<void> {
-    const message = JSON.parse(msg.content.toString() as string);
-
     try {
-      const domainEvent = this.instanceDomainEvent(
-        DomainEventInstance,
-        message,
+      const content = msg.content.toString();
+      const parsed = domainEvent.prototype.encode(content);
+      const eventInstance = new domainEvent(
+        parsed['aggregateId'],
+        parsed['data'],
+        parsed['eventId'],
+        parsed['occurredOn'],
       );
 
-      await handler(domainEvent);
-    } catch (error) {
-      await this.handleError(msg, message, error);
+      await handler(eventInstance);
+      this.channel.ack(msg);
+    } catch (err) {
+      this.logger.error(`Error processing message: ${err}`);
+      this.retryOrDeadLetter(msg, queueName);
     }
   }
 
-  private async handleError(
-    msg: ConsumeMessage,
-    message: any,
-    error: any,
-  ): Promise<void> {
-    const headers = msg.properties.headers;
-    const currentRetry = headers.retries || 0;
+  private retryOrDeadLetter(msg: ConsumeMessage, queueName: string): void {
+    const originQueue = msg.fields.routingKey;
 
-    if (this.maxRetries && currentRetry < this.maxRetries) {
-      await this.retry(message, headers, msg);
+    if (originQueue === queueName) {
+      // Primer fallo → retry
+      this.channel.sendToQueue(
+        `${queueName}.retry`,
+        msg.content,
+        msg.properties,
+      );
     } else {
-      await this.sendToDlx(
-        message,
-        error.message as string,
-        msg.fields.routingKey as string,
+      // Fallo después de retry → dead-letter
+      this.channel.sendToQueue(
+        `${queueName}.dead_letter`,
+        msg.content,
+        msg.properties,
       );
     }
+
+    this.channel.ack(msg); // Sacamos el mensaje de la cola actual
   }
 }

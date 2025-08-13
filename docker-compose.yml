@@ -12,6 +12,8 @@ services:
     env_file:
       - .env.${ENV:-local}
     depends_on:
+      rabbitmq:
+          condition: service_healthy
       db:
         condition: service_healthy
     restart: always
