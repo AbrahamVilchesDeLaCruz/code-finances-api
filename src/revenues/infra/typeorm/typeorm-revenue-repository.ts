@@ -1,12 +1,20 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { RevenueRepository } from '@revenues/domain/revenue.repository';
+import { RevenueEntity } from './revenue.entity';
+import { Repository } from 'typeorm';
+import { Revenue } from '@revenues/domain/revenue';
+import { RevenueMapper } from './revenue-mapper';
 
 @Injectable()
 export class TypeormRevenueRepository implements RevenueRepository {
-  async save(): Promise<void> {
-    // This method should contain the logic to save a revenue using TypeORM.
-    // For now, it's just a placeholder.
-    console.log('Saving revenue using TypeORM repository...');
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate async operation
+  constructor(
+    @InjectRepository(RevenueEntity)
+    private readonly model: Repository<RevenueEntity>,
+  ) {}
+
+  async save(revenue: Revenue): Promise<void> {
+    const entity = RevenueMapper.toPersistence(revenue);
+    await this.model.save(entity);
   }
 }

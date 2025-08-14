@@ -2,20 +2,20 @@ services:
   app:
     build:
       context: .
-      target: local
+      target: test
     container_name: code-finances-api
     ports:
       - '${PORT}:${PORT}'
     volumes:
       - .:/var/www
     env_file:
-      - .env.local
+      - .env.test
     depends_on:
       rabbitmq:
-          condition: service_healthy
+        condition: service_healthy
       db:
         condition: service_healthy
-    restart: always
+    restart: "no"
     networks:
       - code-finances-net
     deploy:

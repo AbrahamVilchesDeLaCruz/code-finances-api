@@ -16,9 +16,9 @@ CMD ["npm", "run", "start:dev"]
 # Etapa de test
 FROM base AS test
 ENV NODE_ENV=test
-COPY .env.test .env.test
+COPY .env.test .env
 COPY test ./test
-RUN npm install
+RUN npm install --include=dev
 CMD ["npm", "run", "test"]
 
 # Etapa de producción
