@@ -19,7 +19,8 @@ ENV NODE_ENV=test
 COPY .env.test .env
 COPY test ./test
 RUN npm install --include=dev
-CMD ["npm", "run", "test"]
+CMD ["npm", "run", "test:cov"]
+#CMD bash -c "npm run migration:run && npm run test"
 
 # Etapa de producción
 FROM base AS prod
