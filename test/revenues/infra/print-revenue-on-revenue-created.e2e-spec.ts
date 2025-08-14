@@ -33,10 +33,27 @@ describe('RevenueCreator Integration', () => {
 
   it('should publish event and handle it', async () => {
     const request = RevenueCreatorMother.random();
+
+    // Creamos una promesa que se resuelve cuando se llama el handler
+    let resolveHandler: () => void;
+    const handlerCalled = new Promise<void>((resolve, reject) => {
+      resolveHandler = resolve;
+      // opcional: puedes agregar un timeout para no colgar el test si algo falla
+      setTimeout(
+        () => reject(new Error('Handler no se llamó a tiempo')),
+        5000,
+      ).unref();
+    });
+
+    // Spy que resuelve la promesa solo una vez
+    spyHandle.mockImplementationOnce(() => {
+      resolveHandler();
+    });
+
     await revenueCreator.execute(request);
 
-    // Espera un poco para que el evento se propague (ajusta según tu implementación)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Esperamos a que el handler se ejecute o falle por timeout
+    await handlerCalled;
 
     expect(spyHandle).toHaveBeenCalled();
   }, 10000);
