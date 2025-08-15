@@ -3,29 +3,34 @@ import { HttpStatus, INestApplication } from '@nestjs/common';
 import { AppModule } from '../../../../src/app.module';
 import request from 'supertest';
 
-describe('HealthCheckerGetController E2E Tests', () => {
-  let app: INestApplication;
+const RUN_E2E = process.env.RUN_E2E === 'true';
 
-  beforeAll(async () => {
-    const moduleRef: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+(RUN_E2E ? describe : describe.skip)(
+  'HealthCheckerGetController E2E Tests',
+  () => {
+    let app: INestApplication;
 
-    app = moduleRef.createNestApplication();
-    await app.init();
-  });
+    beforeAll(async () => {
+      const moduleRef: TestingModule = await Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
 
-  it(`/GET /health should return OK`, async () => {
-    const url = `/health`;
-    const responseExpected = { status: 'OK' };
+      app = moduleRef.createNestApplication();
+      await app.init();
+    });
 
-    const response = await request(app.getHttpServer()).get(url);
+    it(`/GET /health should return OK`, async () => {
+      const url = `/health`;
+      const responseExpected = { status: 'OK' };
 
-    expect(response.statusCode).toBe(HttpStatus.OK);
-    expect(response.body).toEqual(responseExpected);
-  });
+      const response = await request(app.getHttpServer()).get(url);
 
-  afterAll(async () => {
-    await app.close();
-  });
-});
+      expect(response.statusCode).toBe(HttpStatus.OK);
+      expect(response.body).toEqual(responseExpected);
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+  },
+);

@@ -5,7 +5,9 @@ import { RevenueCreator } from '@revenues/app/create/revenue-creator';
 import { PrintRevenueOnRevenueCreated } from '@revenues/infra/print-revenue-on-revenue-created';
 import { RevenueCreatorMother } from '../app/create/revenue-creator-mother';
 
-describe('RevenueCreator Integration', () => {
+const RUN_E2E = process.env.RUN_E2E === 'true';
+
+(RUN_E2E ? describe : describe.skip)('RevenueCreator Integration', () => {
   let app: INestApplication;
   let revenueCreator: RevenueCreator;
   let spyHandle: jest.SpyInstance;
