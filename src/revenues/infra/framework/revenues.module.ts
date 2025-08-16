@@ -5,10 +5,11 @@ import { REVENUE_REPOSITORY } from '@revenues/domain/revenue.repository';
 import { PrintRevenueOnRevenueCreated } from '../print-revenue-on-revenue-created';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RevenueEntity } from '../typeorm/revenue.entity';
+import { CreateRevenuePostController } from '../controllers/create-revenue-post.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([RevenueEntity])],
-  controllers: [],
+  controllers: [CreateRevenuePostController],
   providers: [
     RevenueCreator,
     {
