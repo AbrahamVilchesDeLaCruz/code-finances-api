@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventBus } from '@shared/domain/event/event-bus';
 import amqp, {
@@ -15,11 +15,12 @@ import { CouldNotConnectToBus } from './could-not-connect-to-bus.exception';
 import { DomainEvent } from '@shared/domain/event/domain-event';
 
 @Injectable()
-export class AmqpEventBus implements EventBus {
+export class AmqpEventBus implements EventBus, OnApplicationShutdown {
   private readonly logger = new Logger(AmqpEventBus.name);
 
   private connection!: Connection;
   private channel!: Channel;
+  private channelModel: ChannelModel;
 
   private readonly url: string;
   private readonly exchangeType: string;
@@ -41,9 +42,9 @@ export class AmqpEventBus implements EventBus {
     while (attempt < this.maxRetries) {
       try {
         this.logger.log(`Connecting to RabbitMQ (attempt ${attempt + 1})...`);
-        const channelModel = (await amqp.connect(this.url)) as ChannelModel;
-        this.connection = channelModel.connection as Connection;
-        this.channel = await channelModel.createChannel();
+        this.channelModel = await amqp.connect(this.url);
+        this.connection = this.channelModel.connection;
+        this.channel = await this.channelModel.createChannel();
         this.logger.log('Connected to RabbitMQ');
         return;
       } catch (err: any) {
@@ -154,9 +155,9 @@ export class AmqpEventBus implements EventBus {
       `Consuming from "${queueName}" (binding "${bindingKey}") on exchange "${exchangeName}"`,
     );
 
-    await channel.consume(queueName, async (msg) => {
+    await channel.consume(queueName, (msg) => {
       if (!msg) return;
-      await this.handleMessage(msg, queueName, domainEvent, handler);
+      void this.handleMessage(msg, queueName, domainEvent, handler);
     });
   }
 
@@ -204,5 +205,10 @@ export class AmqpEventBus implements EventBus {
     }
 
     this.channel.ack(msg); // Sacamos el mensaje de la cola actual
+  }
+
+  async onApplicationShutdown(): Promise<void> {
+    await this.channel?.close();
+    await this.channelModel.close();
   }
 }
