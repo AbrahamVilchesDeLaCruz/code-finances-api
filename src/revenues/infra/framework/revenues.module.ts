@@ -6,10 +6,11 @@ import { PrintRevenueOnRevenueCreated } from '../print-revenue-on-revenue-create
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RevenueEntity } from '../typeorm/revenue.entity';
 import { CreateRevenuePostController } from '../controllers/create-revenue-post.controller';
+import { SearchRevenuesGetController } from '../controllers/search-revenues-get.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([RevenueEntity])],
-  controllers: [CreateRevenuePostController],
+  controllers: [CreateRevenuePostController, SearchRevenuesGetController],
   providers: [
     RevenueCreator,
     {
