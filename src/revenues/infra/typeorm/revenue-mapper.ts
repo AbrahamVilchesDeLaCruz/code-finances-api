@@ -7,7 +7,7 @@ export class RevenueMapper {
 
     return Revenue.fromPrimitives({
       id,
-      amount,
+      amount: Number(amount),
       date,
       equityId,
       accountId,

@@ -1,18 +1,18 @@
 import { FilterField } from './filter-field';
-import { FilterOperator } from './filter-operator';
+import { FilterOperator, OperatorOptions } from './filter-operator';
 import { FilterValue } from './filter-value';
 
 export type FiltersPrimitives = {
   field: string;
   operator: string;
-  value: string | null;
+  value: string;
 };
 
 export class Filter {
   constructor(
     readonly field: FilterField,
     readonly operator: FilterOperator,
-    readonly value: FilterValue | null,
+    readonly value: FilterValue,
   ) {}
 
   toPrimitives(): FiltersPrimitives {
@@ -28,8 +28,8 @@ export class Filter {
 
     return new Filter(
       new FilterField(field),
-      new FilterOperator(operator),
-      value ? new FilterValue(value) : null,
+      new FilterOperator(operator as OperatorOptions),
+      new FilterValue(value),
     );
   }
 }

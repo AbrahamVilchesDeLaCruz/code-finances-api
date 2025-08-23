@@ -7,12 +7,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RevenueEntity } from '../typeorm/revenue.entity';
 import { CreateRevenuePostController } from '../controllers/create-revenue-post.controller';
 import { SearchRevenuesGetController } from '../controllers/search-revenues-get.controller';
+import { RevenuesSearcher } from '@revenues/app/search/revenues-searcher';
 
 @Module({
   imports: [TypeOrmModule.forFeature([RevenueEntity])],
   controllers: [CreateRevenuePostController, SearchRevenuesGetController],
   providers: [
     RevenueCreator,
+    RevenuesSearcher,
     {
       provide: REVENUE_REPOSITORY,
       useClass: TypeormRevenueRepository,

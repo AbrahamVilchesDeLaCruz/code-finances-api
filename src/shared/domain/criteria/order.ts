@@ -23,6 +23,9 @@ export class Order {
       return Order.none();
     }
 
-    return new Order(new OrderBy(orderBy), new OrderType(orderType));
+    return new Order(
+      new OrderBy(orderBy),
+      new OrderType(orderType as OrderTypes),
+    );
   }
 }

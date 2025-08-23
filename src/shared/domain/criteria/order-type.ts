@@ -7,13 +7,13 @@ export enum OrderTypes {
 }
 
 export class OrderType extends StringValueObject {
-  constructor(public readonly value: string) {
+  constructor(public readonly value: OrderTypes) {
     super(value);
     this.ensureOrderTypeIsValid();
   }
 
   private ensureOrderTypeIsValid(): void {
-    if (!Object.values(OrderTypes).includes(this.value as OrderTypes)) {
+    if (!Object.values(OrderTypes).includes(this.value)) {
       throw new Error(`Invalid order type: ${this.value}`);
     }
   }

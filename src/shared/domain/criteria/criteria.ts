@@ -1,6 +1,7 @@
 import { FiltersPrimitives } from './filter';
 import { Filters } from './filters';
 import { Order, OrderPrimitives } from './order';
+import { OrderTypes } from './order-type';
 import { Pagination, PaginationPrimitives } from './pagination';
 
 export class Criteria {
@@ -20,5 +21,13 @@ export class Criteria {
       Order.fromPrimitives(order),
       Pagination.fromPrimitives(pagination),
     );
+  }
+
+  hasFilters(): boolean {
+    return this.filters.value.length > 0;
+  }
+
+  hasOrder(): boolean {
+    return this.order.orderType.value !== OrderTypes.NONE;
   }
 }
